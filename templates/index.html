@@ -1,0 +1,806 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Server Uptime Monitoring | AIML Dashboard</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #101827;
+            color: #f8fafc;
+            padding: 30px;
+        }
+
+        header {
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            color: #38bdf8;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            color: #94a3b8;
+        }
+
+        .refresh {
+            background: #0284c7;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 7px;
+            cursor: pointer;
+            margin-top: 18px;
+        }
+
+        .refresh:hover {
+            background: #0369a1;
+        }
+
+        h3 {
+            margin: 28px 0 18px;
+            color: #e2e8f0;
+        }
+
+        .cards, .ml-stats {
+            display: grid;
+            grid-template-columns:
+                repeat(auto-fit, minmax(180px, 1fr));
+            gap: 18px;
+            margin-bottom: 30px;
+        }
+
+        .card, .ml-box, .website-card,
+        .ml-section, .chart-container {
+            background: #1e293b;
+            padding: 22px;
+            border-radius: 12px;
+            border: 1px solid #334155;
+        }
+
+        .card p, .ml-box p {
+            color: #94a3b8;
+            margin-bottom: 12px;
+        }
+
+        .card h2, .ml-box h2 {
+            color: #38bdf8;
+            font-size: 27px;
+            overflow-wrap: anywhere;
+        }
+
+        .website-card {
+            margin-bottom: 15px;
+        }
+
+        .website-card h3 {
+            margin: 0 0 15px;
+            color: #38bdf8;
+            overflow-wrap: anywhere;
+        }
+
+        .website-card p {
+            margin: 10px 0;
+            color: #cbd5e1;
+            overflow-wrap: anywhere;
+        }
+
+        .up {
+            color: #4ade80;
+            font-weight: bold;
+        }
+
+        .down {
+            color: #f87171;
+            font-weight: bold;
+        }
+
+        .warning {
+            color: #fbbf24;
+            font-weight: bold;
+        }
+
+        .info {
+            color: #38bdf8;
+            font-weight: bold;
+        }
+
+        .ml-section {
+            margin-bottom: 30px;
+        }
+
+        .ml-section h3 {
+            color: #38bdf8;
+            margin-top: 0;
+        }
+
+        .ml-description {
+            color: #cbd5e1;
+            line-height: 1.6;
+            margin: 12px 0;
+        }
+
+        .baseline-section {
+            margin-top: 25px;
+        }
+
+        .baseline-section h3 {
+            margin-bottom: 15px;
+        }
+
+        .baseline-card {
+            background: #263449;
+            padding: 15px;
+            border-radius: 9px;
+            margin-bottom: 10px;
+            overflow-wrap: anywhere;
+        }
+
+        .baseline-card p {
+            color: #cbd5e1;
+            margin: 7px 0;
+        }
+
+        .alert-card {
+            background: #263449;
+            padding: 18px;
+            border-radius: 9px;
+            margin: 12px 0;
+            border-left: 4px solid #fbbf24;
+            overflow-wrap: anywhere;
+        }
+
+        .alert-card.critical {
+            border-left-color: #ef4444;
+        }
+
+        .alert-card.warning-alert {
+            border-left-color: #f59e0b;
+        }
+
+        .alert-card.info-alert {
+            border-left-color: #38bdf8;
+        }
+
+        .alert-card p {
+            color: #cbd5e1;
+            margin: 9px 0;
+            line-height: 1.5;
+        }
+
+        .model-status {
+            display: inline-block;
+            padding: 9px 14px;
+            border-radius: 7px;
+            margin: 15px 0;
+            background: #064e3b;
+            color: #4ade80;
+            font-weight: bold;
+        }
+
+        .model-wait {
+            background: #7f1d1d;
+            color: #fca5a5;
+        }
+
+        /* MODEL EVALUATION SECTION */
+
+        .evaluation-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #334155;
+        }
+
+        .evaluation-section h3 {
+            color: #38bdf8;
+            margin-top: 0;
+        }
+
+        .evaluation-note {
+            background: #263449;
+            border-left: 4px solid #38bdf8;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            color: #cbd5e1;
+            line-height: 1.6;
+        }
+
+        .chart-container {
+            height: 380px;
+            margin-bottom: 30px;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            background: #1e293b;
+            border-radius: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 650px;
+        }
+
+        th, td {
+            padding: 14px;
+            text-align: left;
+            border-bottom: 1px solid #334155;
+        }
+
+        th {
+            background: #263449;
+            color: #38bdf8;
+        }
+
+        td {
+            color: #cbd5e1;
+        }
+
+        tr:hover {
+            background: #263449;
+        }
+
+        .empty {
+            color: #94a3b8;
+            padding: 15px 0;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 35px;
+            color: #64748b;
+            line-height: 1.7;
+        }
+
+        @media(max-width: 600px) {
+            body {
+                padding: 15px;
+            }
+
+            header h1 {
+                font-size: 24px;
+            }
+
+            .card, .ml-box,
+            .website-card, .ml-section {
+                padding: 17px;
+            }
+
+            .chart-container {
+                height: 300px;
+                padding: 12px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>SERVER UPTIME MONITOR</h1>
+    <p>Intelligent Server Monitoring and ML Anomaly Detection Dashboard</p>
+
+    <button class="refresh" onclick="location.reload()">
+        Refresh Dashboard
+    </button>
+</header>
+
+<!-- MAIN DASHBOARD STATISTICS -->
+
+<div class="cards">
+
+    <div class="card">
+        <p>Total Websites</p>
+        <h2>{{ summaries|length }}</h2>
+    </div>
+
+    <div class="card">
+        <p>Total Monitoring Checks</p>
+        <h2>{{ total_checks }}</h2>
+    </div>
+
+    <div class="card">
+        <p>Overall Uptime</p>
+        <h2>{{ overall_uptime }}%</h2>
+    </div>
+
+    <div class="card">
+        <p>Monitoring System</p>
+        <h2>ACTIVE</h2>
+    </div>
+
+</div>
+
+<!-- WEBSITE STATUS -->
+
+<h3>Website Monitoring Status</h3>
+
+{% for item in summaries %}
+
+<div class="website-card">
+
+    <h3>{{ item.website }}</h3>
+
+    <p>
+        Current Status:
+
+        {% if item.current_status == "UP" %}
+            <span class="up">● UP</span>
+        {% else %}
+            <span class="down">● DOWN</span>
+        {% endif %}
+    </p>
+
+    <p>Uptime: {{ item.uptime }}%</p>
+
+    <p>
+        Average Response Time:
+        {{ "%.2f"|format(item.avg_response or 0) }} ms
+    </p>
+
+    <p>
+        ML Response Baseline:
+
+        {% if item.ml_baseline is defined and item.ml_baseline is not none %}
+            {{ "%.2f"|format(item.ml_baseline) }} ms
+        {% else %}
+            Not Available
+        {% endif %}
+    </p>
+
+    <p>Total Checks: {{ item.total }}</p>
+
+</div>
+
+{% else %}
+
+<p class="empty">No website monitoring records available.</p>
+
+{% endfor %}
+
+<!-- MACHINE LEARNING SECTION -->
+
+<h3>Machine Learning Anomaly Detection</h3>
+
+<div class="ml-section">
+
+    <h3>Isolation Forest Analysis</h3>
+
+    <p class="ml-description">
+        The Machine Learning module analyzes historical server
+        response-time data and identifies unusual observations
+        using the Isolation Forest algorithm.
+    </p>
+
+    <p class="ml-description">{{ ml_report.note }}</p>
+
+    {% if ml_report.ml_ready %}
+        <div class="model-status">
+            ML Analysis Completed
+        </div>
+    {% else %}
+        <div class="model-status model-wait">
+            More Data Required
+        </div>
+    {% endif %}
+
+    <div class="ml-stats">
+
+        <div class="ml-box">
+            <p>Total ML Records</p>
+            <h2>{{ ml_report.total_records }}</h2>
+        </div>
+
+        <div class="ml-box">
+            <p>Successful Checks</p>
+            <h2>{{ ml_report.successful_checks }}</h2>
+        </div>
+
+        <div class="ml-box">
+            <p>Server Down Alerts</p>
+            <h2>{{ ml_report.down_alerts }}</h2>
+        </div>
+
+        <div class="ml-box">
+            <p>Detected Anomalies</p>
+            <h2>{{ ml_report.anomaly_count }}</h2>
+        </div>
+
+        <div class="ml-box">
+            <p>Average Response</p>
+            <h2>{{ ml_report.average_response }} ms</h2>
+        </div>
+
+        <div class="ml-box">
+            <p>Median Response</p>
+            <h2>{{ ml_report.median_response }} ms</h2>
+        </div>
+
+    </div>
+
+    <!-- MACHINE LEARNING MODEL EVALUATION -->
+
+    {% set evaluation = ml_report.get('evaluation', {}) %}
+
+    <div class="evaluation-section">
+
+        <h3>Machine Learning Model Evaluation</h3>
+
+        <p class="ml-description">
+            The dataset is divided chronologically into training
+            and testing records. The model is trained using earlier
+            records and evaluated on later records.
+        </p>
+
+        {% if evaluation %}
+
+        <div class="ml-stats">
+
+            <div class="ml-box">
+                <p>Training Records</p>
+                <h2>{{ evaluation.get('training_records', 0) }}</h2>
+            </div>
+
+            <div class="ml-box">
+                <p>Testing Records</p>
+                <h2>{{ evaluation.get('testing_records', 0) }}</h2>
+            </div>
+
+            <div class="ml-box">
+                <p>Test Anomalies</p>
+                <h2>{{ evaluation.get('test_anomalies', 0) }}</h2>
+            </div>
+
+            <div class="ml-box">
+                <p>Test Anomaly Rate</p>
+                <h2>{{ evaluation.get('test_anomaly_rate', 0) }}%</h2>
+            </div>
+
+        </div>
+
+        <div class="evaluation-note">
+            <strong>Evaluation Note:</strong><br>
+            {{ evaluation.get('note', 'Evaluation information is not available.') }}
+            <br><br>
+            <strong>Important:</strong>
+            Anomaly rate represents the percentage of unusual
+            observations detected in the test data. It is not
+            the accuracy of the model.
+        </div>
+
+        {% else %}
+
+        <p class="empty">
+            Model evaluation data is not available.
+            Please check the evaluation function in ml_anomaly.py.
+        </p>
+
+        {% endif %}
+
+    </div>
+
+    <!-- WEBSITE BASELINES -->
+
+    <div class="baseline-section">
+
+        <h3>Website-wise Response Time Baselines</h3>
+
+        {% for website, baseline in
+            (ml_report.website_baselines or {}).items() %}
+
+            <div class="baseline-card">
+
+                <p><strong>Website:</strong> {{ website }}</p>
+
+                <p>
+                    <strong>Baseline:</strong>
+                    {{ "%.2f"|format(baseline) }} ms
+                </p>
+
+            </div>
+
+        {% else %}
+
+            <p class="empty">No baseline data available.</p>
+
+        {% endfor %}
+
+    </div>
+
+    <!-- ANOMALY DETAILS -->
+
+    <h3>Anomaly Details</h3>
+
+    {% if ml_report.anomalies %}
+
+        {% for item in ml_report.anomalies %}
+
+            <div class="alert-card
+                {% if item.severity|default('WARNING') == 'CRITICAL' %}
+                    critical
+                {% elif item.severity|default('WARNING') == 'INFO' %}
+                    info-alert
+                {% else %}
+                    warning-alert
+                {% endif %}">
+
+                <p>
+                    <strong>Website:</strong>
+                    {{ item.website }}
+                </p>
+
+                <p>
+                    <strong>Status:</strong>
+                    {{ item.status }}
+                </p>
+
+                <p>
+                    <strong>Response Time:</strong>
+                    {{ item.response_time or "N/A" }} ms
+                </p>
+
+                <p>
+                    <strong>Alert:</strong>
+                    {{ item.reason }}
+                </p>
+
+                <p>
+                    <strong>Severity:</strong>
+
+                    {% if item.severity|default('WARNING') == 'CRITICAL' %}
+                        <span class="down">CRITICAL</span>
+                    {% elif item.severity|default('WARNING') == 'INFO' %}
+                        <span class="info">INFO</span>
+                    {% else %}
+                        <span class="warning">WARNING</span>
+                    {% endif %}
+                </p>
+
+                <p>
+                    <strong>Anomaly Score:</strong>
+                    {{ item.anomaly_score|default("N/A") }}
+                </p>
+
+                <p>
+                    <strong>Checked At:</strong>
+                    {{ item.checked_at }}
+                </p>
+
+            </div>
+
+        {% endfor %}
+
+    {% else %}
+
+        <p class="up">No anomalies detected.</p>
+
+    {% endif %}
+
+</div>
+
+<!-- RESPONSE TIME CHART -->
+
+<h3>Website Response Time Analytics</h3>
+
+<div class="chart-container">
+    <canvas id="responseChart"></canvas>
+</div>
+
+<!-- RECENT LOGS -->
+
+<h3>Recent Monitoring Logs</h3>
+
+<div class="table-container">
+
+    <table>
+
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Website</th>
+                <th>Status</th>
+                <th>Response Time</th>
+                <th>Date & Time</th>
+            </tr>
+        </thead>
+
+        <tbody>
+
+            {% for log in logs %}
+
+            <tr>
+
+                <td>{{ log.id }}</td>
+
+                <td>{{ log.website }}</td>
+
+                <td>
+                    {% if log.status == "UP" %}
+                        <span class="up">UP</span>
+                    {% else %}
+                        <span class="down">DOWN</span>
+                    {% endif %}
+                </td>
+
+                <td>{{ log.response_time or "N/A" }} ms</td>
+
+                <td>{{ log.checked_at }}</td>
+
+            </tr>
+
+            {% else %}
+
+            <tr>
+                <td colspan="5">No monitoring logs available.</td>
+            </tr>
+
+            {% endfor %}
+
+        </tbody>
+
+    </table>
+
+</div>
+
+<footer>
+    <p>Server Uptime Monitoring System</p>
+    <p>B.Tech Artificial Intelligence and Machine Learning Project</p>
+    <p>Python | Flask | SQLite | Scikit-learn | Isolation Forest</p>
+</footer>
+
+<!-- CHART.JS -->
+
+<script>
+
+const labels = [
+    {% for log in logs|reverse %}
+        {{ log.checked_at|tojson }}{% if not loop.last %},{% endif %}
+    {% endfor %}
+];
+
+const responseTimes = [
+    {% for log in logs|reverse %}
+        {{ log.response_time|tojson }}{% if not loop.last %},{% endif %}
+    {% endfor %}
+];
+
+const websites = [
+    {% for log in logs|reverse %}
+        {{ log.website|tojson }}{% if not loop.last %},{% endif %}
+    {% endfor %}
+];
+
+const chartElement = document.getElementById("responseChart");
+
+new Chart(chartElement, {
+
+    type: "line",
+
+    data: {
+
+        labels: labels,
+
+        datasets: [{
+
+            label: "Response Time (ms)",
+
+            data: responseTimes,
+
+            borderColor: "#38bdf8",
+
+            backgroundColor: "rgba(56,189,248,0.15)",
+
+            borderWidth: 3,
+
+            fill: true,
+
+            tension: 0.35,
+
+            pointRadius: 4,
+
+            pointHoverRadius: 7
+
+        }]
+
+    },
+
+    options: {
+
+        maintainAspectRatio: false,
+
+        responsive: true,
+
+        interaction: {
+            intersect: false,
+            mode: "index"
+        },
+
+        plugins: {
+
+            legend: {
+
+                labels: {
+                    color: "white"
+                }
+
+            },
+
+            tooltip: {
+
+                callbacks: {
+
+                    afterLabel: function(context) {
+
+                        return "Website: " +
+                            websites[context.dataIndex];
+
+                    }
+
+                }
+
+            }
+
+        },
+
+        scales: {
+
+            y: {
+
+                beginAtZero: true,
+
+                title: {
+                    display: true,
+                    text: "Response Time (ms)",
+                    color: "white"
+                },
+
+                ticks: {
+                    color: "white"
+                },
+
+                grid: {
+                    color: "#334155"
+                }
+
+            },
+
+            x: {
+
+                ticks: {
+                    color: "white",
+                    maxRotation: 45,
+                    minRotation: 0
+                },
+
+                grid: {
+                    color: "#334155"
+                }
+
+            }
+
+        }
+
+    }
+
+});
+
+</script>
+
+</body>
+</html>
