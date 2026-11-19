@@ -220,5 +220,13 @@ GitHub: \[krrishprashar7-lab](https://github.com/krrishprashar7-lab)
 
 No license has been added yet.
 
+## Screenshots
 
+### 1. Main Dashboard
+![Main Dashboard](screenshots/dashboard.png)
 
+### 2. Analytics and ML Anomaly Detection
+![Analytics Dashboard](screenshots/analytics.png)
+
+### 3. Recent Monitoring Logs
+![Monitoring Logs](screenshots/logs.png)
